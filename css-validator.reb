@@ -4,14 +4,16 @@ Rebol [
 ]
 
 spacer: charset reduce [ tab newline #" " ]
-_: [ some spacer ]
+_: [ any spacer ]
 digit: charset [ #"0" - #"9" ]
 letter: charset [ #"a" - #"z" #"A" - #"Z" ]
-dash: charset "-"
+hex: union digit charset [ #"a" - #"f" #"A" - #"F" ]
+dash: "-"
 word: [ some letter any [ letter | digit | dash ] ]
 comment: [ to "/*" thru "*/" ]
 
-pseudo-selector: [ ":" word opt [ "(" thru ")" ] ]
+fn: [ word [ "(" thru ")" ] ]
+pseudo-selector: [ ":" [ fn | word ] ]
 tag-selector: [ word opt pseudo-selector ]
 id-selector: [ "#" tag-selector ]
 class-selector: [ "." tag-selector ]
@@ -19,11 +21,14 @@ selector: [
 	[ tag-selector | id-selector | class-selector ]
 	any [ id-selector | class-selector ]
 	opt pseudo-selector ]
-selectors: [ selector any [ [ opt _ ">" opt _ | _ ] selector ] ]
+selectors: [ selector any [ [ _ ">" _ | _ ] selector ] ]
 group-of-selectors: [ selectors any [ _ "," _ selectors ] ]
-property: [ word ]
-declaration: [ "{" _ property _ ":" _ value opt ";" ]
-declarations: [ any declaration ]
+property: [ some [ letter | dash ] any [ letter | digit | dash ] ]
+float: [ some digit opt [ "." any digit] ]
+unit: [ "px" | "em" | "rem" | "%" ]
+value: [ float opt unit | fn | word ]
+declaration: [ property _ ":" _ some [ value _ opt "," _ ] opt ";" ]
+declarations: [ "{" _ any [ declaration _ ] "}" ]
 ruleset: [ group-of-selectors declarations ]
 css-rules: [ some [ comment | ruleset | _ ] ]
 
@@ -34,10 +39,11 @@ test: funct [desc css rule /fail] [
 		not any [fail pass?]
 	][
 		print [ "✗" desc ]
-		probe css]
+		probe css
+	]
 ]
 
-print "^/---------------"
+print [ "^/-------" now/time "--------^/" ]
 
 print "=== ID selector ==="
 test "Simple" "#menu" id-selector
@@ -67,3 +73,17 @@ print "=== Selectors ==="
 test "Select children" "a img" selectors
 test "Select immediate children" "a > img" selectors
 test "Compact select immediate children" "a>img" selectors
+
+print "=== Group of selectors ==="
+test "Compact 2 tags" "th,td" group-of-selectors
+test "2 complex selectors" "th#first , td.odd" group-of-selectors
+
+print "=== Property declaration ==="
+test "Compact, simple" "color:red" declaration
+test "Unit value" "margin: 1.2em;" declaration
+test "Function value" "src: url(../fonts/basic.icons.eot);" declaration
+test "Function+Word+Number value"
+	"box-shadow: 0.3em 0em 0em 0 rgba(0, 0, 0, 0.2) inset;" declaration
+test "Multiple comma separated functions"
+	"src: url(../fonts/basic.icons.eot?#iefix) format('embedded-opentype'), url(../fonts/basic.icons.svg#basic.icons) format('svg'), url(../fonts/basic.icons.woff) format('woff'), url(../fonts/basic.icons.ttf) format('truetype');"
+	declaration
