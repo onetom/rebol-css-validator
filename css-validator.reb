@@ -29,7 +29,10 @@ css-rules: [ some [ comment | ruleset | _ ] ]
 
 test: funct [desc css rule /fail] [
 	pass?: parse/all css rule
-	if any [fail not pass?][
+	if any [
+		all [fail pass?]
+		not any [fail pass?]
+	][
 		print [ "✗" desc ]
 		probe css]
 ]
