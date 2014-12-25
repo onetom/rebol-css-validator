@@ -29,7 +29,7 @@ css-rules: [ some [ comment | ruleset | _ ] ]
 
 test: funct [desc css rule /fail] [
 	pass?: parse/all css rule
-	unless xor not not fail pass? [
+	if any [fail not pass?][
 		print [ "✗" desc ]
 		probe css]
 ]
